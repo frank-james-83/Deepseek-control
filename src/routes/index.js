@@ -5,14 +5,14 @@ const { exec } = require('child_process'); // 注意：此段代码在当前逻�
 
 // const { formatContent } = require('../utils/contentFormatter');
 const { DeepSeekApi } = require('../utils/deepseekAPI') ;
-const { filterAndExecuteCommands } = require('../utils/cmdExecutor');
+const { processCodeBlocks } = require('../utils/cmdExecutor');
 
 // 模拟聊天数据
 let chatHistory = [
     {
         id: 1,
         role: 'assistant',
-        content: '```cmd: dir\n cmd: tree /F | findstr /V /I /C:"node_modules" /C:".git" 、\n cmd: echo ^<!DOCTYPE html^><html^><head^><title^>Snake Game^></title^><link rel="stylesheet" href="style.css"^></head^><body^><canvas id="gameCanvas"^></canvas^><script src="game.js"^></script^></body^></html^> > autoCode\snake-game\index.html```',
+        content: '```javascript\n// 示例代码\nconst message = "Hello, World!";\nconsole.log(message);\n```',
         timestamp: new Date().toISOString()
     }
 ];
@@ -54,14 +54,17 @@ router.post('/api/send', async (req, res) => { // 添加 async 关键字
             timestamp: new Date().toISOString()
         };
 
-        // 过滤出 cmd 命令行的程序并执行
-        try {
-            const results = await filterAndExecuteCommands(assistantMessage.content);
-            results.forEach((result, index) => {
-                console.log(`第 ${index + 1} 条命令执行结果:\n${result}`);
-            });
-        } catch (error) {
-            console.error(error.message);
+        // 提取所有代码块
+        const codeBlockRegex = /```(\w+)\n([\s\S]*?)```/g;
+        let matches;
+        const codeBlocks = [];
+        while ((matches = codeBlockRegex.exec(aiResponse.reply)) !== null) {
+            codeBlocks.push(matches[2]);
+        }
+
+        // 处理代码块
+        if (codeBlocks.length > 0) {
+            await processCodeBlocks(codeBlocks);
         }
 
         // 更新对话历史（同时保存用户和 AI 的消息）
