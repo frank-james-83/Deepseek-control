@@ -12,7 +12,7 @@ let chatHistory = [
     {
         id: 1,
         role: 'assistant',
-        content: '```cmd: dir\n cmd: tree /F | findstr /V /I /C:"node_modules" /C:".git" cmd: echo <html><body><h1>Example create HTML FILE Hello World</h1></body></html> > hello_world.html```',
+        content: '```cmd: dir\n cmd: tree /F | findstr /V /I /C:"node_modules" /C:".git" 、\n cmd: echo ^<!DOCTYPE html^><html^><head^><title^>Snake Game^></title^><link rel="stylesheet" href="style.css"^></head^><body^><canvas id="gameCanvas"^></canvas^><script src="game.js"^></script^></body^></html^> > autoCode\snake-game\index.html```',
         timestamp: new Date().toISOString()
     }
 ];
