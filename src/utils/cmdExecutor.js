@@ -1,7 +1,8 @@
 const fs = require('fs');
 const path = require('path');
-const { exec } = require('child_process');
+const { spawn } = require('child_process');
 const { readFileSync } = require('fs');
+const os = require('os');
 
 // 定义不同文件类型对应的注释符号
 const commentSymbols = {
@@ -14,36 +15,7 @@ const commentSymbols = {
 
 let packageJsonPath = null;
 
-// 从 package.json 中读取启动脚本
-function getStartScript() {
-    if (!packageJsonPath) {
-        console.error('未找到 package.json 文件路径');
-        return null;
-    }
-    try {
-        const packageJsonContent = readFileSync(packageJsonPath, 'utf8');
-        const packageJson = JSON.parse(packageJsonContent);
-        const startScript = packageJson.scripts.start;
-        if (startScript) {
-            // 获取 package.json 文件所在的目录
-            const packageJsonDir = path.dirname(packageJsonPath);
-            // 拆分启动脚本命令和参数
-            const [command, ...args] = startScript.split(' ');
-            // 若命令是 node，直接拼接路径
-            if (command === 'node') {
-                const fullScriptPath = path.join(packageJsonDir, args.join(' '));
-                return `node ${fullScriptPath}`;
-            }
-            // 其他命令暂时不做处理，直接返回原启动脚本
-            console.log("startScript is:",startScript)
-            return startScript;
-        }
-        return null;
-    } catch (error) {
-        console.error('读取 package.json 时出错:', error.message);
-        return null;
-    }
-}
+
 
 // 辅助函数：根据代码第一行注释创建文件
 function createFilesFromCode(codeBlocks) {
@@ -121,40 +93,16 @@ function createFilesFromCode(codeBlocks) {
     return Promise.all(creationPromises);
 }
 
-// 执行 package.json 里指定的启动脚本
-async function executeStartScript() {
-    const startScript = getStartScript();
-    if (startScript) {
-        try {
-            const { stdout, stderr } = await new Promise((resolve, reject) => {
-                exec(startScript, (error, stdout, stderr) => {
-                    if (error) {
-                        reject(error);
-                    } else {
-                        resolve({ stdout, stderr });
-                    }
-                });
-            });
-            if (stderr) {
-                console.error('启动脚本执行错误:', stderr);
-            } else {
-                console.log('启动脚本执行结果:', stdout);
-            }
-        } catch (error) {
-            console.error('执行启动脚本时出错:', error.message);
-        }
-    } else {
-        console.error('package.json 中未指定启动脚本');
-    }
-}
+
 
 // 主函数：处理代码块，创建文件并执行启动脚本
 async function processCodeBlocks(codeBlocks) {
     try {
         await createFilesFromCode(codeBlocks);
-        await executeStartScript();
+        return { packageJsonPath };
     } catch (error) {
         console.error('处理代码块时出错:', error.message);
+        return { packageJsonPath: null };
     }
 }
 

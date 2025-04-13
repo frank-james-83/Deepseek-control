@@ -1,5 +1,7 @@
 require('dotenv').config();
 const axios = require('axios');
+const fs = require('fs');
+const path = require('path');
 
 // 配置 DeepSeek API 信息
 const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY;
@@ -71,6 +73,16 @@ javascript
             ...messages.slice(1), // 排除 system 消息
             { role: "assistant", content: aiReply }
         ];
+
+        // 6. 存储聊天历史到日志文件
+        const logFilePath = path.join(__dirname, 'chat_history.log');
+        const logEntry = `[${new Date().toISOString()}] User: ${message}\n[${new Date().toISOString()}] Assistant: ${aiReply}\n`;
+
+        fs.appendFile(logFilePath, logEntry, (err) => {
+            if (err) {
+                console.error('Error writing to log file:', err);
+            }
+        });
 
         return {
             reply: aiReply,

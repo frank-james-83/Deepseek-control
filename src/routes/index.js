@@ -1,11 +1,10 @@
+// src/routes/index.js
 const express = require('express');
 const router = express.Router();
-const axios = require('axios');
-const { exec } = require('child_process'); // 注意：此段代码在当前逻辑中未使用，可根据需要移除
-
-// const { formatContent } = require('../utils/contentFormatter');
-const { DeepSeekApi } = require('../utils/deepseekAPI') ;
+const { exec } = require('child_process');
+const { DeepSeekApi } = require('../utils/deepseekAPI');
 const { processCodeBlocks } = require('../utils/cmdExecutor');
+const { monitorAndFeedback } = require('../utils/programMonitor'); // 引入新功能
 
 // 模拟聊天数据
 let chatHistory = [
@@ -22,9 +21,7 @@ router.get('/', (req, res) => {
     res.render('chat');
 });
 
-
-
-router.post('/api/send', async (req, res) => { // 添加 async 关键字
+router.post('/api/send', async (req, res) => {
     try {
         const { message } = req.body;
 
@@ -44,7 +41,16 @@ router.post('/api/send', async (req, res) => { // 添加 async 关键字
         };
 
         // 调用 DeepSeek API
-        const aiResponse = await DeepSeekApi(message, chatHistory);
+        let aiResponse;
+        if(process.env.AI_MOCK==="MOCK"){
+            // 模拟响应需保持与实际API相同的结构
+            aiResponse = {
+                reply: (await import('../../__tests__/mockResponse.js')).default
+            };
+        }else{
+            aiResponse = await DeepSeekApi(message, chatHistory);
+        }
+        
 
         // 创建 AI 消息对象
         const assistantMessage = {
@@ -62,11 +68,6 @@ router.post('/api/send', async (req, res) => { // 添加 async 关键字
             codeBlocks.push(matches[2]);
         }
 
-        // 处理代码块
-        if (codeBlocks.length > 0) {
-            await processCodeBlocks(codeBlocks);
-        }
-
         // 更新对话历史（同时保存用户和 AI 的消息）
         chatHistory.push(userMessage, assistantMessage);
 
@@ -79,6 +80,19 @@ router.post('/api/send', async (req, res) => { // 添加 async 关键字
             },
             chatHistory: chatHistory.slice(-10) // 返回最近10条记录
         });
+  
+        // 处理代码块
+        let result;
+        if (codeBlocks.length > 0) {
+            result = await processCodeBlocks(codeBlocks);
+        }
+
+        // 获取启动脚本
+
+        await monitorAndFeedback(result.packageJsonPath);
+        
+
+
 
     } catch (error) {
         console.error('API Error:', error.message);
@@ -90,24 +104,15 @@ router.post('/api/send', async (req, res) => { // 添加 async 关键字
     }
 });
 
-
-
 // POST 与 DeepSeek 聊天路由
 router.post('/chat', async (req, res) => {
-    
-
     try {
-        // ... 处理与 DeepSeek 聊天逻辑
         const { message, chatHistory = [] } = req.body; // 接收对话历史
-        const result = await DeepSeekApi(message, chatHistory)
+        const result = await DeepSeekApi(message, chatHistory);
         res.json(result);
-        
     } catch (error) {
-        // 增强错误处理（同时发送到 HTTP 和 WebSocket）
         const errorMessage = error.response?.data?.error || error.message;
         console.error('Chat Error:', errorMessage);
-
-        // 返回 HTTP 错误响应
         res.status(500).json({
             error: '对话服务暂不可用',
             details: errorMessage

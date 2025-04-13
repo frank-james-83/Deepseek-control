@@ -58,6 +58,9 @@
             border: 1px solid #ddd;
             border-radius: 25px;
             font-size: 16px;
+                        /* 新增样式，设置高度和禁止调整大小 */
+            height: 100px;
+            resize: none;
         }
     </style>
 </head>
@@ -68,7 +71,8 @@
         </div>
 
         <div class="input-container">
-            <input type="text" id="message-input" placeholder="Type your message..." onkeypress="handleKeyPress(event)">
+            <!-- <input type="text" id="message-input" placeholder="Type your message..." onkeypress="handleKeyPress(event)"> -->
+            <textarea id="message-input" placeholder="Type your message..." onkeypress="handleKeyPress(event)"></textarea>
         </div>
     </div>
 
@@ -114,98 +118,67 @@
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
         }
 
-
-        messages.forEach(message => {
-            const messageDiv = document.createElement('div');
-            messageDiv.className = 'message';
-            messageDiv.innerHTML = `
-        <strong>${message.user}:</strong>
-        <div class="content">
-        ${formatContent(message.content)}
-        </div>
-    `;
-            messagesContainer.appendChild(messageDiv);
-        });
-        
-        // 代码高亮初始化
-        document.addEventListener('DOMContentLoaded', () => {
-            document.querySelectorAll('pre code').forEach((block) => {
-                hljs.highlightElement(block);
-
-                // 添加复制按钮
-                const pre = block.parentElement;
-                const copyBtn = document.createElement('button');
-                copyBtn.className = 'copy-button';
-                copyBtn.textContent = 'Copy';
-                copyBtn.onclick = () => {
-                    navigator.clipboard.writeText(block.textContent);
-                    copyBtn.textContent = 'Copied!';
-                    setTimeout(() => copyBtn.textContent = 'Copy', 2000);
-                };
-                pre.appendChild(copyBtn);
-            });
-        });
-
-        // 自动滚动到底部
-        const messagesContainer = document.getElementById('messages');
-        messagesContainer.scrollTop = messagesContainer.scrollHeight;
-
         // 消息发送逻辑
         async function sendMessage() {
             const input = document.getElementById('message-input');
             const message = input.value.trim();
             input.value = '';
-            messages.push({ user: 'You', content: message });
-            renderMessages();
             if (message) {
-                const response = await fetch('/api/send', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ message })
-                });
+                messages.push({ user: 'You', content: message });
+                renderMessages();
+                try {
+                    const response = await fetch('/api/send', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ message })
+                    });
 
-                
-                
-
-                const result = await response.json();
-                if (result.status === 'success') {
-
-                    messages.push({ user: 'Assistant', content: result.messages.assistant.content });
-                    // 更新消息历史
-                    messages.length = Math.min(messages.length, 10);
-                    renderMessages();
+                    const result = await response.json();
+                    if (result.status === 'success') {
+                        messages.push({ user: 'Assistant', content: result.messages.assistant.content });
+                        // 更新消息历史
+                        messages.length = Math.min(messages.length, 10);
+                        renderMessages();
+                    }
+                } catch (error) {
+                    console.error('Error sending message:', error);
                 }
-
-
             }
         }
 
         function handleKeyPress(e) {
             if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
-                
                 sendMessage();
             }
         }
 
         function formatContent(content) {
-            // 基础安全处理
-            // let processed = sanitize(content);
+            // 初始化 processed 变量
+            let processed = content;
 
             // 链接自动识别
-            processed = content.replace(
+            processed = processed.replace(
                 /(https?:\/\/[^\s]+)/g,
                 '<a href="$1" target="_blank">$1</a>'
             );
 
             // 代码块高亮
-            processed = content.replace(
+            processed = processed.replace(
                 /```([\s\S]*?)```/g,
-                '<pre><code>$1</code></pre>'
+                (match, code) => {
+                    // 对于 HTML 代码块，不进行转义
+                    if (code.trim().startsWith('<')) {
+                        return `<pre><code class="language-html">${code}</code></pre>`;
+                    }
+                    // 其他代码块，进行转义
+                    code = code.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                    return `<pre><code>${code}</code></pre>`;
+                }
             );
-
+            
             return processed;
         }
     </script>

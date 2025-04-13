@@ -1,0 +1,9 @@
+{
+  "name": "multiplication-table",
+  "version": "1.0.0",
+  "description": "九九乘法表网页应用",
+  "scripts": {
+    "start": "open index.html"
+  },
+  "dependencies": {}
+}

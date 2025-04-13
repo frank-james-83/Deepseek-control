@@ -1,7 +1,7 @@
 {
-  "name": "express-website",
+  "name": "24game-solver",
   "version": "1.0.0",
-  "description": "A simple Express website",
+  "description": "A 24-point game solver",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
