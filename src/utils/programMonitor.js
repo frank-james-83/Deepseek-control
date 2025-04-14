@@ -3,12 +3,13 @@ const { DeepSeekApi } = require('./deepseekAPI');
 const os = require('os');
 const fs = require('fs'); // 引入 fs 模块
 const path = require('path'); // 引入 path 模块
+const getLogsWithPuppeteer = require('../utils/getLogsWithPuppeteer');
 let chatHistory = [];
 
 
 // 从 package.json 中读取启动脚本
 function getStartScript(packageJsonPath) {
-    console.log("开始执行getStartScript()")
+    console.log("开始执行getStartScript()");
     if (!packageJsonPath) {
         console.error('未找到 package.json 文件路径');
         return null;
@@ -38,7 +39,7 @@ function getStartScript(packageJsonPath) {
                     finalCommand = openCommand;
                     finalArgs = args.map(arg => path.join(packageJsonDir, arg));
                 }
-                return { command: finalCommand, args: finalArgs };
+                return { command: finalCommand, args: finalArgs, url: args[0] };
             }
             if (command === 'node') {
                 const fullScriptPath = path.join(packageJsonDir, ...args);
@@ -62,7 +63,11 @@ async function monitorProgram(packageJsonPath) {
     }
     return new Promise((resolve, reject) => {
         console.log('即将执行启动脚本:', startScript.command, startScript.args);
-        const child = spawn(startScript.command, startScript.args, { detached: true, stdio: 'ignore' });
+        const child = spawn(startScript.command,
+            startScript.args, {
+            detached: true,
+            stdio: ['ignore', 'pipe', 'pipe'] // 保留stdout和stderr 
+        });
         child.unref();
         console.log('启动脚本已在后台执行');
 
@@ -83,6 +88,37 @@ async function monitorProgram(packageJsonPath) {
             console.error(errorMessage);
             reject(errorMessage);
         });
+
+        // 监听标准输出
+        child.stdout.on('data', async (data) => {
+            const output = data.toString();
+            console.log('子进程输出:', output);
+            // 在这里调用你的 deepseekapi 将 errorOutput 发送给 AI
+        });
+
+        // 监听错误输出
+        child.stderr.on('data', (data) => {
+            const errorOutput = data.toString();
+            console.error('子进程错误:', errorOutput);
+            // 在这里调用你的 deepseekapi 将Output 发送给 AI
+        });
+
+        // 假设程序启动后会打开一个网页，这里可以获取网页日志
+        let url;
+        // 获取网页日志
+        (async () => {
+            if (startScript.url) {
+                url = startScript.url;
+                console.log("监控的网址为：", url);
+            } else {
+                console.log("监控备用URL")
+                url = 'file:///C:/Users/Administrator/Documents/Nodejs/vscode/server_deepseek/src/autoCode/multiplication-table/index.html'; // 作为备用 URL
+            }
+            const logs = await getLogsWithPuppeteer(url);
+            console.log('Puppeteer 获取的日志:', logs);
+            // 在这里调用你的 deepseekapi 将 output 发送给 AI
+        })();
+
     });
 }
 

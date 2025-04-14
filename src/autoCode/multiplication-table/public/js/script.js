@@ -1,6 +1,6 @@
 document.addEventListener('DOMContentLoaded', function() {
     const table = document.getElementById('multiplication-table');
-    
+    console.log("this is a log from generated application");
     // 创建表头
     for (let i = 0; i <= 9; i++) {
         const headerCell = document.createElement('div');
