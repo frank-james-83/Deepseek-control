@@ -6,7 +6,6 @@ const path = require('path'); // 引入 path 模块
 const getLogsWithPuppeteer = require('../utils/getLogsWithPuppeteer');
 let chatHistory = [];
 
-
 // 从 package.json 中读取启动脚本
 function getStartScript(packageJsonPath) {
     console.log("开始执行getStartScript()");
@@ -39,7 +38,7 @@ function getStartScript(packageJsonPath) {
                     finalCommand = openCommand;
                     finalArgs = args.map(arg => path.join(packageJsonDir, arg));
                 }
-                return { command: finalCommand, args: finalArgs, url: args[0] };
+                return { command: finalCommand, args: finalArgs, url: args[0] ? path.join(packageJsonDir, args[0]) : null };
             }
             if (command === 'node') {
                 const fullScriptPath = path.join(packageJsonDir, ...args);
